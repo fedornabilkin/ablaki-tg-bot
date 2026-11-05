@@ -4,12 +4,12 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=24 <25"
+    "node": ">=26 <27"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "start": "node dist/main.js",
-    "dev": "npm run build && node --env-file=.env dist/main.js"
+    "build": "tsc -p project/tsconfig.json",
+    "start": "node project/dist/main.js",
+    "dev": "npm run build && node --env-file=.env project/dist/main.js"
   },
   "dependencies": {
     "grammy": "1.46.0",
