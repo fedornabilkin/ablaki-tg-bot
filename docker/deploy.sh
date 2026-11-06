@@ -13,7 +13,7 @@ done
 [[ "$BOT_HOST" =~ ^[A-Za-z0-9][A-Za-z0-9.:-]*$ ]]
 [[ "$BOT_PORT" =~ ^[0-9]{1,5}$ ]]
 (( 10#$BOT_PORT >= 1 && 10#$BOT_PORT <= 65535 ))
-[[ "$BOT_USER" == ablakin-bot && "$BOT_DEPLOY_PATH" == /opt/ablaki-tg-bot ]]
+[[ "$BOT_USER" == deploy && "$BOT_DEPLOY_PATH" == /opt/ablaki-tg-bot ]]
 [[ "$IMAGE_TAG" =~ ^[a-f0-9]{40}$ ]]
 [[ "$GITHUB_ACTOR" =~ ^[A-Za-z0-9_-]+(\[bot\])?$ ]]
 [[ "$DEPLOY_OPERATION" == check || "$DEPLOY_OPERATION" == deploy ]]
@@ -38,7 +38,7 @@ trap cleanup EXIT
 
 remote="$BOT_DEPLOY_PATH/releases/$IMAGE_TAG"
 ssh "${ssh_options[@]}" "$BOT_USER@$BOT_HOST" \
-  "test \"\$(id -un)\" = ablakin-bot && test \"\$(realpath '$BOT_DEPLOY_PATH')\" = '$BOT_DEPLOY_PATH' && test -w '$BOT_DEPLOY_PATH/releases' && mkdir -p '$remote' && test \"\$(realpath '$remote')\" = '$remote'"
+  "test \"\$(id -un)\" = deploy && test \"\$(realpath '$BOT_DEPLOY_PATH')\" = '$BOT_DEPLOY_PATH' && test -w '$BOT_DEPLOY_PATH/releases' && mkdir -p '$remote' && test \"\$(realpath '$remote')\" = '$remote'"
 tar -C "$script_dir" -cf - compose.deploy.yaml server-release.sh | \
   ssh "${ssh_options[@]}" "$BOT_USER@$BOT_HOST" "umask 077; tar -xf - -C '$remote'"
 printf '%s\n' "$GHCR_TOKEN" | ssh "${ssh_options[@]}" "$BOT_USER@$BOT_HOST" \

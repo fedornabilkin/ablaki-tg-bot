@@ -11,12 +11,12 @@ $KeyPath = (Resolve-Path -LiteralPath $KeyPath).Path
 $KnownHostsPath = (Resolve-Path -LiteralPath $KnownHostsPath).Path
 & gh auth status
 if ($LASTEXITCODE -ne 0) { throw 'Run gh auth login first.' }
-& ssh -i $KeyPath -p $Port -o IdentitiesOnly=yes -o IdentityAgent=none -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=$KnownHostsPath" "ablakin-bot@$Server" 'test "$(id -un)" = ablakin-bot && test -w /opt/ablaki-tg-bot/releases && test -r /opt/ablaki-tg-bot/.env && docker info >/dev/null && docker compose version'
+& ssh -i $KeyPath -p $Port -o IdentitiesOnly=yes -o IdentityAgent=none -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=$KnownHostsPath" "deploy@$Server" 'test "$(id -un)" = deploy && test -w /opt/ablaki-tg-bot/releases && test -r /opt/ablaki-tg-bot/.env && docker info >/dev/null && docker compose version'
 if ($LASTEXITCODE -ne 0) { throw 'SSH/Docker/directory check failed. No GitHub settings were changed.' }
 $settings = [ordered]@{
     BOT_HOST = $Server
     BOT_PORT = [string]$Port
-    BOT_USER = 'ablakin-bot'
+    BOT_USER = 'deploy'
     BOT_DEPLOY_PATH = '/opt/ablaki-tg-bot'
     BOT_SSH_KEY = [IO.File]::ReadAllText($KeyPath)
     BOT_KNOWN_HOSTS = [IO.File]::ReadAllText($KnownHostsPath)

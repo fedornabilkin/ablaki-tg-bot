@@ -4,13 +4,17 @@
 
 Как у фронтенда: отдельный пользователь, фиксированные каталоги, проверенный host key, сборка в GitHub, релиз по SHA, проверка здоровья и откат. На VPS нет checkout приложения, npm или Node.js на хосте.
 
+SSH-пользователь — `deploy`, как при выкладке фронтенда. Его существующие ключи сохраняются; права чтения домашнего каталога не ужесточаются до `700`. Каталоги бота и `.ssh` получают отдельные права.
+
+GitHub можно настроить полностью через браузер: **Settings → Secrets and variables → Actions**. В Repository secrets добавьте `BOT_HOST`, `BOT_PORT`, `BOT_USER=deploy`, `BOT_DEPLOY_PATH=/opt/ablaki-tg-bot`, `BOT_SSH_KEY` (закрытый ключ) и `BOT_KNOWN_HOSTS` (проверенный ключ сервера). В Repository variables добавьте `BOT_DEPLOY_ENABLED=false`. Затем **Actions → Telegram bot → Run workflow**, ветка `master`, `operation=check`. После успешной проверки и остановки локального бота измените переменную на `true` и запустите `operation=deploy`. Поле `check_id` можно оставить пустым. Команды с `gh` ниже — альтернативный способ, они не требуются для настройки через браузер.
+
 | Назначение | Значение |
 |---|---|
 | Репозиторий | `fedornabilkin/ablaki-tg-bot` |
-| Пользователь SSH | `ablakin-bot` |
+| Пользователь SSH | `deploy` |
 | Каталог | `/opt/ablaki-tg-bot` |
 | Релизы | `/opt/ablaki-tg-bot/releases/<SHA>` |
-| Секреты приложения | `/opt/ablaki-tg-bot/.env`, владелец `ablakin-bot`, права `600` |
+| Секреты приложения | `/opt/ablaki-tg-bot/.env`, владелец `deploy`, права `600` |
 | Данные | Docker volume `ablakin-telegram-bot_bot-data`, UID/GID `1000:1000` |
 | Публикация | push master собирает образ; сервер запускается только ручным `operation=deploy` |
 
@@ -103,7 +107,7 @@ $ScpHost = if ($Server.Contains(':')) { "[$Server]" } else { $Server }
 scp -P $Port -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=$KnownHosts" "$Key.pub" docker/server-setup.sh docker/configure-env.sh "${Admin}@${ScpHost}:$Bootstrap/"
 if ($LASTEXITCODE -ne 0) { throw 'Не удалось передать файлы настройки' }
 $RootPrefix = if ($Admin -eq 'root') { '' } else { 'sudo ' }
-ssh -tt @SshOptions "$Admin@$Server" "${RootPrefix}bash '$Bootstrap/server-setup.sh' '$Bootstrap/ablakin-bot-actions.pub' && ${RootPrefix}runuser -u ablakin-bot -- bash /opt/ablaki-tg-bot/docker/configure-env.sh"
+ssh -tt @SshOptions "$Admin@$Server" "${RootPrefix}bash '$Bootstrap/server-setup.sh' '$Bootstrap/ablakin-bot-actions.pub' && ${RootPrefix}runuser -u deploy -- bash /opt/ablaki-tg-bot/docker/configure-env.sh"
 if ($LASTEXITCODE -ne 0) { throw 'Настройка сервера не завершена' }
 ```
 
@@ -156,11 +160,11 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\docker\check.ps1 -Operatio
 
 Релиз повторяет preflight, затем останавливает старый контейнер, запускает новый и ждёт healthcheck. При ошибке возвращает предыдущий образ и Compose; том не удаляет. При самой первой выкладке откатывать некуда — неудачный контейнер останавливается, состояние сохраняется. Нельзя параллельно запускать иной Compose project с тем же токеном. Логи ограничены 3×10 MB. Docker поднимает контейнер после перезагрузки VPS.
 
-Последующие обновления: `git push` → образ; затем та же команда с `-Operation deploy`. Без неё push сервер не меняет. Для изменения `.env` из административной SSH-сессии выполните `sudo -u ablakin-bot bash /opt/ablaki-tg-bot/docker/configure-env.sh` (из root: `runuser -u ablakin-bot -- bash /opt/ablaki-tg-bot/docker/configure-env.sh`), затем check и deploy. Релизы сохраняются; автоматической очистки образов/тома нет.
+Последующие обновления: `git push` → образ; затем та же команда с `-Operation deploy`. Без неё push сервер не меняет. Для изменения `.env` из административной SSH-сессии выполните `sudo -u deploy bash /opt/ablaki-tg-bot/docker/configure-env.sh` (из root: `runuser -u deploy -- bash /opt/ablaki-tg-bot/docker/configure-env.sh`), затем check и deploy. Релизы сохраняются; автоматической очистки образов/тома нет.
 
 ## 7. Посмотреть состояние и логи
 
-В SSH-сессии пользователя `ablakin-bot`:
+В SSH-сессии пользователя `deploy`:
 
 ```bash
 cd /opt/ablaki-tg-bot

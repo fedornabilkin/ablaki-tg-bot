@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 umask 077
-[[ $(id -un) == ablakin-bot ]] || { echo 'Run as ablakin-bot (sudo -u ablakin-bot bash docker/configure-env.sh).' >&2; exit 1; }
+[[ $(id -un) == deploy ]] || { echo 'Run as deploy (sudo -u deploy bash docker/configure-env.sh).' >&2; exit 1; }
 root=/opt/ablaki-tg-bot
 [[ $(realpath "$root") == "$root" && ! -L "$root/.env" ]] || exit 1
 read -r -p 'Public HTTPS API base URL (without /auth/telegram): ' api_url
@@ -16,4 +16,4 @@ printf 'TELEGRAM_BOT_TOKEN=%s\nABL_API_BASE_URL=%s\nTELEGRAM_AUTH_API_KEY=%s\n' 
 chmod 0600 "$temporary"
 if [[ -f "$root/.env" ]]; then cp -p "$root/.env" "$root/.env.backup.$(date +%Y%m%d-%H%M%S)"; fi
 mv -f -- "$temporary" "$root/.env"
-echo 'Three settings saved, owner ablakin-bot, mode 600. Secrets were not printed.'
+echo 'Three settings saved, owner deploy, mode 600. Secrets were not printed.'

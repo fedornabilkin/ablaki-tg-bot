@@ -42,13 +42,17 @@ compose_version=$(docker compose version --short) || die 'Install the Docker Com
 [[ $(printf '%s\n' 2.30.0 "${compose_version#v}" | sort -V | head -n1) == 2.30.0 ]] || die 'Docker Compose >= 2.30.0 is required.'
 for command in flock tar stat realpath openssl; do command -v "$command" >/dev/null || die "Missing $command"; done
 
-deploy_user=ablakin-bot
+deploy_user=deploy
 deploy_root=/opt/ablaki-tg-bot
 if ! id "$deploy_user" >/dev/null 2>&1; then useradd --create-home --shell /bin/bash "$deploy_user"; fi
-[[ $(getent passwd "$deploy_user" | cut -d: -f6) == /home/ablakin-bot ]] || die 'Existing deployment user has an unexpected home.'
+[[ $(getent passwd "$deploy_user" | cut -d: -f6) == /home/deploy ]] || die 'Existing deployment user has an unexpected home.'
 [[ $(getent passwd "$deploy_user" | cut -d: -f7) == /bin/bash ]] || die 'Deployment user needs /bin/bash.'
+[[ $(id -u "$deploy_user") != 0 && ! -L /home/deploy && $(stat -c %u /home/deploy) == "$(id -u "$deploy_user")" ]] || die 'Invalid deployment user or home owner.'
+home_mode=$(stat -c %a /home/deploy)
+(( (8#$home_mode & 0022) == 0 )) || die 'The deployment home must not be writable by group/others.'
 usermod -aG docker "$deploy_user"
-for directory in /home/ablakin-bot /home/ablakin-bot/.ssh "$deploy_root" "$deploy_root/releases" "$deploy_root/docker"; do
+# deploy can also serve the frontend: preserve its home mode and existing SSH keys.
+for directory in /home/deploy/.ssh "$deploy_root" "$deploy_root/releases" "$deploy_root/docker"; do
   [[ ! -L "$directory" ]] || die "Refusing symbolic link: $directory"
   install -d -o "$deploy_user" -g "$(id -gn "$deploy_user")" -m 0700 "$directory"
 done
@@ -57,7 +61,7 @@ done
 configure_script="$(dirname -- "$(realpath "${BASH_SOURCE[0]}")")/configure-env.sh"
 [[ -f "$configure_script" && ! -L "$deploy_root/docker/configure-env.sh" ]] || die 'configure-env.sh must accompany server-setup.sh.'
 install -o "$deploy_user" -g "$(id -gn "$deploy_user")" -m 0700 "$configure_script" "$deploy_root/docker/configure-env.sh"
-keys=/home/ablakin-bot/.ssh/authorized_keys
+keys=/home/deploy/.ssh/authorized_keys
 [[ ! -L $keys ]] || die 'authorized_keys must not be a symlink.'
 touch "$keys"
 public_key=$(tr -d '\r\n' < "$key_file")

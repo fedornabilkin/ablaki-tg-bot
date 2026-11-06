@@ -7,9 +7,9 @@ sha=$1; operation=$2; registry_user=$3
 [[ "$sha" =~ ^[a-f0-9]{40}$ && "$registry_user" =~ ^[A-Za-z0-9_-]+(\[bot\])?$ ]] || die 'Invalid deployment arguments.'
 [[ "$operation" == check || "$operation" == deploy ]] || die 'Invalid operation.'
 root=/opt/ablaki-tg-bot
-[[ $(id -un) == ablakin-bot && $(id -u) != 0 ]] || die 'SSH must use ablakin-bot, not root.'
+[[ $(id -un) == deploy && $(id -u) != 0 ]] || die 'SSH must use deploy, not root.'
 [[ $(realpath "$root") == "$root" && -w "$root/releases" ]] || die 'Wrong deployment path or directory permissions.'
-[[ -f "$root/.env" && ! -L "$root/.env" && $(stat -c %a "$root/.env") == 600 && $(stat -c %u "$root/.env") == "$(id -u)" ]] || die '.env must be a regular file owned by ablakin-bot with mode 600.'
+[[ -f "$root/.env" && ! -L "$root/.env" && $(stat -c %a "$root/.env") == 600 && $(stat -c %u "$root/.env") == "$(id -u)" ]] || die '.env must be a regular file owned by deploy with mode 600.'
 [[ $(uname -m) == x86_64 ]] || die 'The published image requires an x86_64 server.'
 docker info >/dev/null || die 'Docker permission denied: check group membership in a fresh SSH session.'
 version=$(docker compose version --short)
