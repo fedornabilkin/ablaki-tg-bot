@@ -5,7 +5,7 @@ function global:gh {
     $argText = $args -join ' '
     if ($argText -eq 'auth status') { return }
     if ($argText.StartsWith('secret list')) {
-        $names = @('BOT_HOST','BOT_PORT','BOT_USER','BOT_DEPLOY_PATH','BOT_SSH_KEY','BOT_KNOWN_HOSTS')
+        $names = @('BOT_HOST','BOT_PORT','BOT_USER','BOT_SSH_KEY','BOT_KNOWN_HOSTS')
         if ($global:botCheckScenario -eq 'missing') { $names = @('BOT_HOST') }
         return ConvertTo-Json -Compress -InputObject @($names | ForEach-Object { @{name=$_} })
     }

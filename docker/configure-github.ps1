@@ -17,7 +17,6 @@ $settings = [ordered]@{
     BOT_HOST = $Server
     BOT_PORT = [string]$Port
     BOT_USER = 'deploy'
-    BOT_DEPLOY_PATH = '/opt/ablaki-tg-bot'
     BOT_SSH_KEY = [IO.File]::ReadAllText($KeyPath)
     BOT_KNOWN_HOSTS = [IO.File]::ReadAllText($KnownHostsPath)
 }

@@ -6,7 +6,7 @@
 
 SSH-пользователь — `deploy`, как при выкладке фронтенда. Его существующие ключи сохраняются; права чтения домашнего каталога не ужесточаются до `700`. Каталоги бота и `.ssh` получают отдельные права.
 
-GitHub можно настроить полностью через браузер: **Settings → Secrets and variables → Actions**. В Repository secrets добавьте `BOT_HOST`, `BOT_PORT`, `BOT_USER=deploy`, `BOT_DEPLOY_PATH=/opt/ablaki-tg-bot`, `BOT_SSH_KEY` (закрытый ключ) и `BOT_KNOWN_HOSTS` (проверенный ключ сервера). В Repository variables добавьте `BOT_DEPLOY_ENABLED=false`. Затем **Actions → Telegram bot → Run workflow**, ветка `master`, `operation=check`. После успешной проверки и остановки локального бота измените переменную на `true` и запустите `operation=deploy`. Поле `check_id` можно оставить пустым. Команды с `gh` ниже — альтернативный способ, они не требуются для настройки через браузер.
+GitHub можно настроить полностью через браузер: **Settings → Secrets and variables → Actions**. В Repository secrets добавьте `BOT_HOST`, `BOT_PORT`, `BOT_USER=deploy`, `BOT_SSH_KEY` (закрытый ключ) и `BOT_KNOWN_HOSTS` (проверенный ключ сервера). Каталог `/opt/ablaki-tg-bot` закреплён в скриптах и отдельной настройки в GitHub не требует. В Repository variables добавьте `BOT_DEPLOY_ENABLED=false`. Затем **Actions → Telegram bot → Run workflow**, ветка `master`, `operation=check`. После успешной проверки и остановки локального бота измените переменную на `true` и запустите `operation=deploy`. Поле `check_id` можно оставить пустым. Команды с `gh` ниже — альтернативный способ, они не требуются для настройки через браузер.
 
 | Назначение | Значение |
 |---|---|
@@ -133,7 +133,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\docker\configure-github.ps
 if ($LASTEXITCODE -ne 0) { throw 'Настройка GitHub не завершена' }
 ```
 
-Скрипт сначала проверяет **тот самый SSH-ключ и пользователя**, которым воспользуется GitHub: без пароля, sudo и интерактивного терминала. После успеха записывает `BOT_HOST`, `BOT_PORT`, `BOT_USER`, `BOT_DEPLOY_PATH`, `BOT_SSH_KEY`, `BOT_KNOWN_HOSTS`. Переменная `BOT_DEPLOY_ENABLED` устанавливается в `false`: проверка разрешена, запуск пока закрыт. BotFather token и ключ API остаются только на VPS и backend. [GitHub CLI secrets](https://cli.github.com/manual/gh_secret_set).
+Скрипт сначала проверяет **тот самый SSH-ключ и пользователя**, которым воспользуется GitHub: без пароля, sudo и интерактивного терминала. После успеха записывает `BOT_HOST`, `BOT_PORT`, `BOT_USER`, `BOT_SSH_KEY`, `BOT_KNOWN_HOSTS`. Переменная `BOT_DEPLOY_ENABLED` устанавливается в `false`: проверка разрешена, запуск пока закрыт. BotFather token и ключ API остаются только на VPS и backend. [GitHub CLI secrets](https://cli.github.com/manual/gh_secret_set).
 
 ## 5. Итоговая команда «проверить всё»
 

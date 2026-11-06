@@ -80,7 +80,6 @@ jobs:
           BOT_HOST: ${{ secrets.BOT_HOST }}
           BOT_PORT: ${{ secrets.BOT_PORT }}
           BOT_USER: ${{ secrets.BOT_USER }}
-          BOT_DEPLOY_PATH: ${{ secrets.BOT_DEPLOY_PATH }}
           BOT_SSH_KEY: ${{ secrets.BOT_SSH_KEY }}
           BOT_KNOWN_HOSTS: ${{ secrets.BOT_KNOWN_HOSTS }}
           GITHUB_ACTOR: ${{ github.actor }}

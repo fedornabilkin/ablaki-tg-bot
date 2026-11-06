@@ -8,7 +8,7 @@ if ($Operation -ne 'build') {
     $secretJson = & gh secret list --repo $repo --json name
     if ($LASTEXITCODE -ne 0) { throw 'Cannot read GitHub secret names. Repository admin access is required.' }
     $names = @($secretJson | ConvertFrom-Json | ForEach-Object { $_.name })
-    foreach ($name in @('BOT_HOST','BOT_PORT','BOT_USER','BOT_DEPLOY_PATH','BOT_SSH_KEY','BOT_KNOWN_HOSTS')) {
+    foreach ($name in @('BOT_HOST','BOT_PORT','BOT_USER','BOT_SSH_KEY','BOT_KNOWN_HOSTS')) {
         if ($names -notcontains $name) { throw "Missing GitHub secret: $name. Run configure-github.ps1." }
     }
 }
