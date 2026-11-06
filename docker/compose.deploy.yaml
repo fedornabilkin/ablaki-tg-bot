@@ -1,8 +1,10 @@
 name: ablakin-telegram-bot
 services:
   telegram-bot:
-    image: ghcr.io/fedornabilkin/ablaki-tg-bot:${IMAGE_TAG:-latest}
-    env_file: ../.env
+    image: ghcr.io/fedornabilkin/ablaki-tg-bot:${IMAGE_TAG:?Use docker/server-release.sh with a commit SHA}
+    env_file:
+      - path: /opt/ablaki-tg-bot/.env
+        format: raw
     volumes:
       - bot-data:/data
     extra_hosts:
@@ -15,5 +17,12 @@ services:
     tmpfs:
       - /tmp:size=1m,noexec,nosuid,nodev
     stop_grace_period: 45s
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
 volumes:
   bot-data:
+    name: ablakin-telegram-bot_bot-data
+    external: true

@@ -18,7 +18,13 @@ bot/
 │   ├── Dockerfile.dockerignore
 │   ├── compose.yaml         # локальная сборка контейнера
 │   ├── compose.deploy.yaml  # запуск образа из GHCR
-│   └── deploy.sh            # выкладка по SSH
+│   ├── deploy.sh            # выкладка по SSH
+│   ├── server-setup.sh      # Docker, пользователь и права на VPS
+│   ├── server-release.sh    # проверка, запуск и откат
+│   ├── configure-env.sh     # три секрета/параметра на VPS
+│   ├── configure-github.ps1 # SSH и secrets репозитория
+│   ├── check.ps1            # итоговая проверка / запуск через Actions
+│   └── README.md            # все команды настройки по порядку
 ├── .github/workflows/       # обязательное расположение GitHub Actions
 ├── .env                    # три локальных параметра, вне Git
 └── .env.example
@@ -38,7 +44,7 @@ bot/
 
 Имя бота определяется через Telegram getMe и регистрируется в API сайта при запуске. Название сайта и отображаемый домен возвращает API. Polling, пути хранения и остальные параметры заданы в коде. Домен и входящие порты для сервера бота не нужны.
 
-В backend env остаётся только `TELEGRAM_AUTH_API_KEY`. Примените миграции `m261104_120000_telegram_auth` и `m261106_120000_telegram_settings`. Переключатель находится в админке: «Настройки авторизации», адрес `/auth-settings/index`, доступ с правом `p-admin`. Он включён по умолчанию; вход становится доступен после подключения реального бота. Повторный запуск бота не меняет решение администратора.
+В backend env остаётся только `TELEGRAM_AUTH_API_KEY`. Примените миграции `m261104_120000_telegram_auth`, `m261106_120000_telegram_settings` и `m261106_140000_telegram_unlink`. Переключатель находится в админке: «Настройки авторизации», адрес `/auth-settings/index`, доступ с правом `p-admin`. Он включён по умолчанию; вход становится доступен после подключения реального бота. Повторный запуск бота не меняет решение администратора.
 
 ## Локальный запуск без Docker
 
@@ -71,10 +77,12 @@ docker compose -f docker/compose.yaml logs --tail=50 -f telegram-bot
 
 ## GitHub Actions и отдельный сервер
 
-Push в master проверяет TypeScript и публикует образ в GHCR. Выкладка VPS выполняется отдельно через Run workflow с `deploy=true`; дополнительно требуется переменная Actions `BOT_DEPLOY_ENABLED=true`. Во время локальной разработки push не выкатывает production.
+Полная [инструкция с командами для Windows и VPS](docker/README.md) находится рядом со скриптами выкладки. Скрипты готовят отдельного пользователя `ablakin-bot`, каталог `/opt/ablaki-tg-bot`, права SSH, `.env` и тома. Приложению по-прежнему нужны только три параметра; настройки подключения GitHub хранятся отдельно.
 
-На VPS установите Docker/Compose и положите `.env` в каталог развёртывания с правами 600. Настройте Actions secrets: `BOT_HOST` (IP), `BOT_PORT` (22), `BOT_USER`, `BOT_DEPLOY_PATH`, `BOT_SSH_KEY`, `BOT_KNOWN_HOSTS`. Публичный SSH-ключ добавьте пользователю сервера. Host key проверьте через консоль VPS перед добавлением в known_hosts.
+Push в master проверяет код и публикует Docker-образ по SHA. Настроенный сервер проверяется без запуска polling:
 
-Workflow вызывает `docker/deploy.sh`: он передаёт `docker/compose.deploy.yaml` в такую же подпапку на сервере, получает образ с SHA коммита и ждёт здорового контейнера. Серверный `.env` остаётся в корне каталога развёртывания; Compose читает его через `../.env`. Для приватного GHCR используется краткоживущий GITHUB_TOKEN. Токен Telegram и общий ключ хранятся только в серверном `.env`, в workflow они не передаются.
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\docker\check.ps1
+```
 
-Для ручного запуска готового образа после входа в GHCR: `docker compose -f docker/compose.deploy.yaml up -d`. Приложение обращается только к Telegram и API сайта, прямого доступа к базе нет.
+После настройки и остановки локального экземпляра: `check.ps1 -Operation deploy`, с переменной Actions `BOT_DEPLOY_ENABLED=true`. Workflow повторяет проверку соединений и прав, ждёт healthy и при неудаче возвращает предыдущий релиз. Push сам по себе сервер не меняет. BotFather token и общий ключ не передаются через GitHub; состояние хранится в постоянном томе.
