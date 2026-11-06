@@ -81,7 +81,7 @@ export function registerHandlers(target: Bot, store: StateStore, api: SiteApi, b
           return;
         }
         await ctx.reply(completedMessage(prepared.status === "denied" ? "denied" : "approved",
-          botConfig.siteHost, prepared.purpose));
+          prepared.purpose));
         return;
       }
       const sent = await ctx.reply(message.text, { reply_markup: message.reply_markup });
@@ -125,7 +125,7 @@ export function registerHandlers(target: Bot, store: StateStore, api: SiteApi, b
     try {
       const decision = await api.decide(receipt.requestId, userId, approve);
       const outcome = decision.status === "denied" ? "denied" : "approved";
-      await ctx.editMessageText(completedMessage(outcome, botConfig.siteHost, receipt.purpose),
+      await ctx.editMessageText(completedMessage(outcome, receipt.purpose),
         { reply_markup: { inline_keyboard: [] } }).catch(() => undefined);
       log("request_confirmed", { update: ctx.update.update_id, decision: outcome });
     } catch (error) {

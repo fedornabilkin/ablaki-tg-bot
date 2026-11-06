@@ -30,8 +30,8 @@ export function approvalMessage(request: Prepared, config: Config) {
   };
 }
 
-export function completedMessage(decision: Decision, siteHost: string, purpose: Prepared["purpose"]): string {
+export function completedMessage(decision: Decision, purpose: Prepared["purpose"]): string {
   if (decision === "denied") return "Запрос отклонён. Сайт не выполнит вход.";
   if (purpose === "link") return "Привязка подтверждена в Telegram. Завершите подключение кнопкой «Подключить» во вкладке сайта.";
-  return "Вход подтверждён на " + siteHost + ". Вернитесь во вкладку сайта: она войдёт автоматически.";
+  return "Вы успешно авторизовались на сайте Аблокин, теперь можно вернуться обратно на сайт.";
 }
