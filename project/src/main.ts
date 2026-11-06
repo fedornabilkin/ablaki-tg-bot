@@ -7,7 +7,13 @@ import { approvalMessage, completedMessage } from "./messages.js";
 import { SiteApi, SiteApiError, requestIdSchema } from "./site-api.js";
 import { StateStore } from "./state.js";
 
-const config = readConfig(process.env);
+const config = (() => {
+  try { return readConfig(process.env); }
+  catch (error) {
+    console.error(error instanceof Error ? error.message : 'Invalid environment');
+    process.exit(1);
+  }
+})();
 const bot = new Bot(config.token);
 const site = new SiteApi(config.apiUrl, config.apiKey);
 let stopping = false;

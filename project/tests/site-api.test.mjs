@@ -34,7 +34,17 @@ test('temporary register failure retries without changing the identity', async (
 
 test('only local HTTP is accepted and config errors never include credentials', () => {
   const env = { TELEGRAM_BOT_TOKEN: '123:' + 'a'.repeat(32), TELEGRAM_AUTH_API_KEY: 's'.repeat(48), ABL_API_BASE_URL: 'http://host.docker.internal:3180' };
-  assert.equal(readConfig(env).apiUrl, env.ABL_API_BASE_URL);
+  assert.equal(readConfig(env, true).apiUrl, env.ABL_API_BASE_URL);
   assert.throws(() => readConfig({ ...env, ABL_API_BASE_URL: 'http://example.com' }), /HTTPS/);
   assert.throws(() => readConfig({ ...env, TELEGRAM_BOT_TOKEN: 'private-invalid-token' }), error => !error.message.includes('private-invalid-token'));
+});
+
+test('the same local env resolves the backend correctly on Windows and in Docker', () => {
+  const env = { TELEGRAM_BOT_TOKEN: '123:' + 'a'.repeat(32), TELEGRAM_AUTH_API_KEY: 's'.repeat(48), ABL_API_BASE_URL: 'http://127.0.0.1:3180/api' };
+  assert.equal(readConfig(env, false).apiUrl, 'http://127.0.0.1:3180/api');
+  assert.equal(readConfig(env, true).apiUrl, 'http://host.docker.internal:3180/api');
+  assert.equal(readConfig({ ...env, ABL_API_BASE_URL: 'http://host.docker.internal:3180' }, false).apiUrl, 'http://127.0.0.1:3180');
+  assert.match(readConfig(env, false).dataDir.replaceAll('\\', '/'), /\/bot\/data$/);
+  assert.equal(readConfig(env, true).dataDir, '/data');
+  assert.equal(readConfig({ ...env, ABL_API_BASE_URL: 'https://api.ablakin.ru' }, true).apiUrl, 'https://api.ablakin.ru');
 });

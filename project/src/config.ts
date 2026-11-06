@@ -11,7 +11,7 @@ const envSchema = z.object({
 
 export type Config = ReturnType<typeof readConfig>;
 
-export function readConfig(env: NodeJS.ProcessEnv) {
+export function readConfig(env: NodeJS.ProcessEnv, inContainer = existsSync('/.dockerenv')) {
   const parsed = envSchema.safeParse(env);
   // Do not include Zod errors: they may contain input secrets.
   if (!parsed.success) throw new Error('Invalid environment: ' + [...new Set(parsed.error.issues.map(i => i.path[0]))].join(', '));
@@ -21,13 +21,18 @@ export function readConfig(env: NodeJS.ProcessEnv) {
   if (api.username || api.password || api.search || api.hash || (api.protocol !== 'https:' && !(local && api.protocol === 'http:'))) {
     throw new Error('API URL must use HTTPS; local development also allows loopback/Docker HTTP.');
   }
+  // Keep one local .env usable both on the host and in Docker Desktop.
+  if (api.protocol === 'http:' && local) {
+    if (inContainer) api.hostname = 'host.docker.internal';
+    else if (api.hostname === 'host.docker.internal') api.hostname = '127.0.0.1';
+  }
   return {
     token: e.TELEGRAM_BOT_TOKEN,
     apiKey: e.TELEGRAM_AUTH_API_KEY,
     apiUrl: api.href.replace(/\/$/, ''),
     siteHost: api.host,
     siteName: 'Аблакин',
-    dataDir: existsSync('/.dockerenv') ? '/data' : resolve(import.meta.dirname, '../../data'),
+    dataDir: inContainer ? '/data' : resolve(import.meta.dirname, '../../data'),
     healthFile: resolve(tmpdir(), 'bot-health.json'),
   };
 }
