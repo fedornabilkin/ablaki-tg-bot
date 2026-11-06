@@ -14,7 +14,9 @@ function description(request: Prepared, config: Config): string {
     "",
     "Сравните код с кодом во вкладке сайта. Если вы его не запрашивали или коды не совпадают, нажмите «Отказать».",
     "",
-    "После подтверждения сайт обновится автоматически. Перейти по ссылке из этого чата не потребуется.",
+    request.purpose === "link"
+      ? "После подтверждения вернитесь во вкладку сайта и нажмите «Подключить». Ссылка из этого чата не потребуется."
+      : "После подтверждения сайт обновится автоматически. Перейти по ссылке из этого чата не потребуется.",
   ].join("\n");
 }
 
@@ -30,6 +32,6 @@ export function approvalMessage(request: Prepared, config: Config) {
 
 export function completedMessage(decision: Decision, siteHost: string, purpose: Prepared["purpose"]): string {
   if (decision === "denied") return "Запрос отклонён. Сайт не выполнит вход.";
-  if (purpose === "link") return "Telegram подключён к аккаунту. Вернитесь во вкладку сайта.";
+  if (purpose === "link") return "Привязка подтверждена в Telegram. Завершите подключение кнопкой «Подключить» во вкладке сайта.";
   return "Вход подтверждён на " + siteHost + ". Вернитесь во вкладку сайта: она войдёт автоматически.";
 }
