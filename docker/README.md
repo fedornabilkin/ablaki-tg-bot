@@ -84,8 +84,17 @@ if (!(Test-Path -LiteralPath $Key)) {
     ssh-keygen -t ed25519 -a 64 -f $Key -C 'ablakin-bot-github-actions'
     if ($LASTEXITCODE -ne 0) { throw 'Не удалось создать SSH-ключ' }
 }
-icacls $Key /inheritance:r /grant:r "$($env:USERNAME):(F)"
-if ($LASTEXITCODE -ne 0) { throw 'Не удалось ограничить доступ к ключу' }
+# /inheritance:r не удаляет явно заданные права других учётных записей.
+$KeyOwnerSid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+icacls $Key /inheritance:r /grant:r "*${KeyOwnerSid}:(F)"
+if ($LASTEXITCODE -ne 0) { throw 'Не удалось настроить доступ владельца ключа' }
+$OtherKeySids = @((Get-Acl -LiteralPath $Key).Access |
+    ForEach-Object { $_.IdentityReference.Translate([System.Security.Principal.SecurityIdentifier]).Value } |
+    Where-Object { $_ -ne $KeyOwnerSid } | Sort-Object -Unique)
+foreach ($OtherKeySid in $OtherKeySids) {
+    icacls $Key /remove "*$OtherKeySid"
+    if ($LASTEXITCODE -ne 0) { throw 'Не удалось удалить лишние разрешения ключа' }
+}
 # Windows PowerShell 5.1 считает служебный stderr ssh-keyscan ошибкой.
 $ErrorActionPreference = 'Continue'
 $Scan = @(ssh-keyscan -T 15 -t ed25519 -p $Port $Server 2>$null)
