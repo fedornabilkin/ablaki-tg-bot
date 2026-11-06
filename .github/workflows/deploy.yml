@@ -46,6 +46,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
+          file: docker/Dockerfile
           push: true
           tags: |
             ghcr.io/${{ github.repository_owner }}/ablaki-tg-bot:${{ github.sha }}
@@ -58,7 +59,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - name: Check deployment settings
+      - name: Deploy the checked image
         env:
           BOT_HOST: ${{ secrets.BOT_HOST }}
           BOT_PORT: ${{ secrets.BOT_PORT }}
@@ -66,63 +67,7 @@ jobs:
           BOT_DEPLOY_PATH: ${{ secrets.BOT_DEPLOY_PATH }}
           BOT_SSH_KEY: ${{ secrets.BOT_SSH_KEY }}
           BOT_KNOWN_HOSTS: ${{ secrets.BOT_KNOWN_HOSTS }}
-        run: |
-          set -euo pipefail
-          for name in BOT_HOST BOT_PORT BOT_USER BOT_DEPLOY_PATH BOT_SSH_KEY BOT_KNOWN_HOSTS; do
-            if [[ -z "${!name}" ]]; then
-              echo "Missing repository secret: $name" >&2
-              exit 1
-            fi
-          done
-          [[ "$BOT_HOST" =~ ^[A-Za-z0-9][A-Za-z0-9.:-]*$ ]]
-          [[ "$BOT_PORT" =~ ^[0-9]{1,5}$ ]]
-          (( 10#$BOT_PORT >= 1 && 10#$BOT_PORT <= 65535 ))
-          [[ "$BOT_USER" =~ ^[a-z_][a-z0-9_-]*$ ]]
-          [[ "$BOT_DEPLOY_PATH" =~ ^/[A-Za-z0-9._/-]+$ && "$BOT_DEPLOY_PATH" != *..* ]]
-          [[ "$BOT_KNOWN_HOSTS" == *"$BOT_HOST"* || "$BOT_KNOWN_HOSTS" == *"[$BOT_HOST]:$BOT_PORT"* ]]
-      - name: Configure pinned SSH host key
-        env:
-          BOT_SSH_KEY: ${{ secrets.BOT_SSH_KEY }}
-          BOT_KNOWN_HOSTS: ${{ secrets.BOT_KNOWN_HOSTS }}
-        run: |
-          set -euo pipefail
-          install -m 700 -d "$HOME/.ssh"
-          printf '%s\n' "$BOT_SSH_KEY" | tr -d '\r' > "$HOME/.ssh/bot_deploy_key"
-          printf '%s\n' "$BOT_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
-          chmod 600 "$HOME/.ssh/bot_deploy_key" "$HOME/.ssh/known_hosts"
-      - name: Copy Compose file and initialize deployment directory
-        env:
-          BOT_HOST: ${{ secrets.BOT_HOST }}
-          BOT_PORT: ${{ secrets.BOT_PORT }}
-          BOT_USER: ${{ secrets.BOT_USER }}
-          BOT_DEPLOY_PATH: ${{ secrets.BOT_DEPLOY_PATH }}
-        run: |
-          set -euo pipefail
-          ssh -i "$HOME/.ssh/bot_deploy_key" -p "$BOT_PORT" \
-            -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes \
-            -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
-            "$BOT_USER@$BOT_HOST" "mkdir -p '$BOT_DEPLOY_PATH/data' && test -s '$BOT_DEPLOY_PATH/.env' && docker compose version >/dev/null"
-          scp -i "$HOME/.ssh/bot_deploy_key" -P "$BOT_PORT" \
-            -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
-            compose.deploy.yaml "$BOT_USER@$BOT_HOST:$BOT_DEPLOY_PATH/compose.yaml"
-      - name: Pull and start the new container
-        env:
-          BOT_HOST: ${{ secrets.BOT_HOST }}
-          BOT_PORT: ${{ secrets.BOT_PORT }}
-          BOT_USER: ${{ secrets.BOT_USER }}
-          BOT_DEPLOY_PATH: ${{ secrets.BOT_DEPLOY_PATH }}
           GITHUB_ACTOR: ${{ github.actor }}
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           IMAGE_TAG: ${{ github.sha }}
-        run: |
-          set -euo pipefail
-          ssh_options=(-i "$HOME/.ssh/bot_deploy_key" -p "$BOT_PORT" -o BatchMode=yes \
-            -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
-          cleanup_registry_login() {
-            ssh "${ssh_options[@]}" "$BOT_USER@$BOT_HOST" "docker logout ghcr.io >/dev/null 2>&1 || true" || true
-          }
-          trap cleanup_registry_login EXIT
-          printf '%s' "$GHCR_TOKEN" | ssh "${ssh_options[@]}" "$BOT_USER@$BOT_HOST" \
-            "docker login ghcr.io --username '$GITHUB_ACTOR' --password-stdin >/dev/null"
-          ssh "${ssh_options[@]}" "$BOT_USER@$BOT_HOST" \
-            "cd '$BOT_DEPLOY_PATH' && IMAGE_TAG='$IMAGE_TAG' docker compose --env-file .env -f compose.yaml pull && IMAGE_TAG='$IMAGE_TAG' docker compose --env-file .env -f compose.yaml up -d --no-build --remove-orphans --wait --wait-timeout 90"
+        run: bash docker/deploy.sh

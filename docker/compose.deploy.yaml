@@ -1,7 +1,8 @@
+name: ablakin-telegram-bot
 services:
   telegram-bot:
-    build: .
-    env_file: .env
+    image: ghcr.io/fedornabilkin/ablaki-tg-bot:${IMAGE_TAG:-latest}
+    env_file: ../.env
     volumes:
       - bot-data:/data
     extra_hosts:

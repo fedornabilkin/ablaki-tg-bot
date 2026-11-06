@@ -1,8 +1,15 @@
 node_modules/
 dist/
+data/
 .env
 .env.*
 !.env.example
-data/
 *.log
 coverage/
+.idea/
+.vscode/
+.DS_Store
+tmp/
+out-tsc/
+.pnp
+.pnp.js

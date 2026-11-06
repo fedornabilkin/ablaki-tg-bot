@@ -32,7 +32,7 @@ export function readConfig(env: NodeJS.ProcessEnv, inContainer = existsSync('/.d
     apiUrl: api.href.replace(/\/$/, ''),
     siteHost: api.host,
     siteName: 'Аблакин',
-    dataDir: inContainer ? '/data' : resolve(import.meta.dirname, '../../data'),
+    dataDir: inContainer ? '/data' : resolve(import.meta.dirname, '../data'),
     healthFile: resolve(tmpdir(), 'bot-health.json'),
   };
 }

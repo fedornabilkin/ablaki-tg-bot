@@ -1,6 +1,28 @@
 # Telegram-бот Аблакина
 
-Node.js 26, TypeScript, grammY и Zod. Приложение целиком находится в `project/`; Docker, Compose, env и GitHub Actions — в корне репозитория.
+Node.js 26, TypeScript, grammY и Zod. Структура повторяет разделение фронтенда: приложение находится в `project/`, инфраструктура — отдельно.
+
+```text
+bot/
+├── project/
+│   ├── src/                 # код бота
+│   ├── tests/               # проверки
+│   ├── package.json
+│   ├── package-lock.json
+│   ├── tsconfig.json
+│   ├── node_modules/        # локальные зависимости, вне Git
+│   ├── dist/                # локальная сборка, вне Git
+│   └── data/                # состояние бота, вне Git
+├── docker/
+│   ├── Dockerfile
+│   ├── Dockerfile.dockerignore
+│   ├── compose.yaml         # локальная сборка контейнера
+│   ├── compose.deploy.yaml  # запуск образа из GHCR
+│   └── deploy.sh            # выкладка по SSH
+├── .github/workflows/       # обязательное расположение GitHub Actions
+├── .env                    # три локальных параметра, вне Git
+└── .env.example
+```
 
 Пользователь открывает бота с сайта, сравнивает шестизначный код и подтверждает вход кнопкой в чате. Сайт сам завершает вход. Дополнительной ссылки для возврата нет. Бот проверяет отправителя и личный чат, сохраняет заявки и offset; повторное нажатие не создаёт второй аккаунт.
 
@@ -22,33 +44,28 @@ Node.js 26, TypeScript, grammY и Zod. Приложение целиком на�
 
 Установите Node.js 26. Заполните токен и общий ключ в корневом `.env`; адрес локального API уже указан. Backend должен работать на порту 3180.
 
-Из папки `bot` в PowerShell:
+Все npm-команды выполняются из `bot/project`:
 
 ```powershell
-.\start.ps1
+cd C:\Users\nolikshpik\Desktop\projects\ablakin\bot\project
+npm ci
+npm start
 ```
 
-Скрипт при первом запуске установит зависимости, соберёт TypeScript, загрузит `.env` и запустит бота. Окно терминала остаётся открытым; для остановки нажмите Ctrl+C. Заявки и offset сохраняются в `bot/data` и переживают перезапуск.
+`npm ci` нужен при первом запуске и после изменения зависимостей. `npm start` собирает TypeScript, загружает `bot/.env` и запускает бота. Окно терминала остаётся открытым; для остановки нажмите Ctrl+C. Заявки и offset сохраняются в `project/data` и переживают перезапуск. `npm run dev` работает аналогично.
 
-Те же действия через npm, в том числе если политика PowerShell запрещает запуск `.ps1`:
-
-```powershell
-npm ci --prefix project
-npm start --prefix project
-```
-
-Если терминал уже открыт в `bot/project`, достаточно `npm start`. Команда сама выполняет сборку и загружает `bot/.env`. `npm run dev` работает аналогично. При изменении зависимостей повторите `npm ci`.
+Проверки из той же директории: `npm run build`, затем `npm test`.
 
 ## Локальный запуск в Docker
 
 Нужны Docker Engine/Desktop с Linux-контейнерами и Compose. Запустите локальный backend на порту 3180. Из корня `bot`:
 
 ```powershell
-docker compose up -d --build
-docker compose logs --tail=50 -f telegram-bot
+docker compose -f docker/compose.yaml up -d --build
+docker compose -f docker/compose.yaml logs --tail=50 -f telegram-bot
 ```
 
-Контейнер сам собирает `project`, работает без root и хранит заявки в именованном томе `bot-data`. Для остановки: `docker compose down`. Не удаляйте том, если нужно сохранить незавершённые заявки. Только один работающий бот на токен.
+Контейнер сам собирает `project`, работает без root и хранит заявки в именованном томе `bot-data`. Для остановки: `docker compose -f docker/compose.yaml down`. Не удаляйте том, если нужно сохранить незавершённые заявки. Только один работающий бот на токен.
 
 Один `.env` подходит обоим способам запуска: внутри Docker локальный адрес автоматически заменяется на `host.docker.internal`. Не запускайте оба экземпляра одновременно с одним токеном.
 
@@ -58,6 +75,6 @@ Push в master проверяет TypeScript и публикует образ в
 
 На VPS установите Docker/Compose и положите `.env` в каталог развёртывания с правами 600. Настройте Actions secrets: `BOT_HOST` (IP), `BOT_PORT` (22), `BOT_USER`, `BOT_DEPLOY_PATH`, `BOT_SSH_KEY`, `BOT_KNOWN_HOSTS`. Публичный SSH-ключ добавьте пользователю сервера. Host key проверьте через консоль VPS перед добавлением в known_hosts.
 
-Workflow передаёт `compose.deploy.yaml` как серверный `compose.yaml`, получает образ с SHA коммита и ждёт здорового контейнера. Для приватного GHCR используется краткоживущий GITHUB_TOKEN. Токен Telegram и общий ключ хранятся только в серверном `.env`, в workflow они не передаются.
+Workflow вызывает `docker/deploy.sh`: он передаёт `docker/compose.deploy.yaml` в такую же подпапку на сервере, получает образ с SHA коммита и ждёт здорового контейнера. Серверный `.env` остаётся в корне каталога развёртывания; Compose читает его через `../.env`. Для приватного GHCR используется краткоживущий GITHUB_TOKEN. Токен Telegram и общий ключ хранятся только в серверном `.env`, в workflow они не передаются.
 
-Для ручного запуска готового образа после входа в GHCR: `docker compose -f compose.deploy.yaml up -d`. Приложение обращается только к Telegram и API сайта, прямого доступа к базе нет.
+Для ручного запуска готового образа после входа в GHCR: `docker compose -f docker/compose.deploy.yaml up -d`. Приложение обращается только к Telegram и API сайта, прямого доступа к базе нет.

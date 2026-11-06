@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { fileURLToPath } from 'node:url';
 import { SiteApi } from '../dist/site-api.js';
 import { readConfig } from '../dist/config.js';
 
@@ -44,7 +45,7 @@ test('the same local env resolves the backend correctly on Windows and in Docker
   assert.equal(readConfig(env, false).apiUrl, 'http://127.0.0.1:3180/api');
   assert.equal(readConfig(env, true).apiUrl, 'http://host.docker.internal:3180/api');
   assert.equal(readConfig({ ...env, ABL_API_BASE_URL: 'http://host.docker.internal:3180' }, false).apiUrl, 'http://127.0.0.1:3180');
-  assert.match(readConfig(env, false).dataDir.replaceAll('\\', '/'), /\/bot\/data$/);
+  assert.equal(readConfig(env, false).dataDir, fileURLToPath(new URL('../data', import.meta.url)));
   assert.equal(readConfig(env, true).dataDir, '/data');
   assert.equal(readConfig({ ...env, ABL_API_BASE_URL: 'https://api.ablakin.ru' }, true).apiUrl, 'https://api.ablakin.ru');
 });

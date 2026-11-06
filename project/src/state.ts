@@ -19,7 +19,7 @@ const stateSchema = z.object({
 export type Receipt = z.infer<typeof receiptSchema>;
 type State = z.infer<typeof stateSchema>;
 
-// One sequential worker owns this file. Docker uses flock on the same persistent volume.
+// One sequential worker owns this file. Run one bot instance per persistent directory.
 export class StateStore {
   private constructor(private readonly dir: string, private readonly state: State) {}
 
