@@ -1,0 +1,17 @@
+services:
+  telegram-bot:
+    image: ghcr.io/fedornabilkin/ablaki-tg-bot:${IMAGE_TAG:-latest}
+    env_file: .env
+    volumes:
+      - bot-data:/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    init: true
+    restart: unless-stopped
+    read_only: true
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    tmpfs: [/tmp:size=1m,noexec,nosuid,nodev]
+    stop_grace_period: 45s
+volumes:
+  bot-data:

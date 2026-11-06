@@ -70,6 +70,10 @@ export function registerHandlers(target: Bot, store: StateStore, api: SiteApi, b
 
       const message = approvalMessage(prepared, botConfig);
       if (prepared.status !== "pending") {
+        if (prepared.status === 'expired' || prepared.status === 'cancelled') {
+          await safeReply(ctx, 'Запрос закрыт. Вернитесь на сайт и начните заново.');
+          return;
+        }
         await ctx.reply(completedMessage(prepared.status === "denied" ? "denied" : "approved",
           botConfig.siteHost, prepared.purpose));
         return;
@@ -121,7 +125,10 @@ export function registerHandlers(target: Bot, store: StateStore, api: SiteApi, b
     } catch (error) {
       log("request_confirmation_failed", { update: ctx.update.update_id, status: error instanceof SiteApiError ? error.status : 0 });
       const temporaryFailure = error instanceof SiteApiError && (error.status === 429 || error.status >= 500);
-      await ctx.editMessageText(publicError(error), temporaryFailure ? undefined
+      await ctx.editMessageText(publicError(error), temporaryFailure ? { reply_markup: { inline_keyboard: [[
+        { text: 'Подтвердить', callback_data: 'ok:' + receipt.requestId },
+        { text: 'Отказать', callback_data: 'no:' + receipt.requestId },
+      ]] } }
         : { reply_markup: { inline_keyboard: [] } }).catch(() => undefined);
     }
   });
@@ -140,9 +147,15 @@ async function writeHealth(path: string) {
 }
 
 async function run() {
-  const me = await bot.api.getMe();
+  await bot.init();
+  const me = bot.botInfo;
   const webhook = await bot.api.getWebhookInfo();
   if (webhook.url) throw new Error("A webhook is configured. Remove it deliberately in BotFather/API before enabling long polling.");
+
+  if (!me.username) throw new Error('Telegram bot username is missing.');
+  const website = await site.register(me.id, me.username);
+  config.siteName = website.name;
+  config.siteHost = website.host;
 
   const store = await StateStore.load(config.dataDir, me.id);
   registerHandlers(bot, store, site);

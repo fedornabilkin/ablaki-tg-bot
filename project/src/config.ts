@@ -1,4 +1,6 @@
 import { resolve } from 'node:path';
+import { existsSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { z } from 'zod';
 
 const envSchema = z.object({
@@ -15,8 +17,9 @@ export function readConfig(env: NodeJS.ProcessEnv) {
   if (!parsed.success) throw new Error('Invalid environment: ' + [...new Set(parsed.error.issues.map(i => i.path[0]))].join(', '));
   const e = parsed.data;
   const api = new URL(e.ABL_API_BASE_URL);
-  if (api.username || api.password || api.search || api.hash || !['https:', 'http:'].includes(api.protocol)) {
-    throw new Error('API URL must be HTTP(S) without credentials, query or fragment.');
+  const local = ['localhost', '127.0.0.1', '[::1]', 'host.docker.internal'].includes(api.hostname);
+  if (api.username || api.password || api.search || api.hash || (api.protocol !== 'https:' && !(local && api.protocol === 'http:'))) {
+    throw new Error('API URL must use HTTPS; local development also allows loopback/Docker HTTP.');
   }
   return {
     token: e.TELEGRAM_BOT_TOKEN,
@@ -24,7 +27,7 @@ export function readConfig(env: NodeJS.ProcessEnv) {
     apiUrl: api.href.replace(/\/$/, ''),
     siteHost: api.host,
     siteName: 'Аблакин',
-    dataDir: resolve('/data'),
-    healthFile: resolve('/tmp/bot-health.json'),
+    dataDir: existsSync('/.dockerenv') ? '/data' : resolve(import.meta.dirname, '../../data'),
+    healthFile: resolve(tmpdir(), 'bot-health.json'),
   };
 }

@@ -1,8 +1,7 @@
 *
-!package.json
-!package-lock.json
-!tsconfig.json
-!src/
-!src/**
-!test/
-!test/**
+!project/
+!project/package.json
+!project/package-lock.json
+!project/tsconfig.json
+!project/src/
+!project/src/**

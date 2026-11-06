@@ -3,7 +3,7 @@ services:
     build: .
     env_file: .env
     volumes:
-      - ./data:/data
+      - bot-data:/data
     extra_hosts:
       - "host.docker.internal:host-gateway"
     init: true
@@ -13,3 +13,5 @@ services:
     cap_drop: [ALL]
     tmpfs: [/tmp:size=1m,noexec,nosuid,nodev]
     stop_grace_period: 45s
+volumes:
+  bot-data:

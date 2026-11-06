@@ -26,6 +26,15 @@ export class SiteApi implements AuthApi {
     private readonly fetcher: typeof fetch = fetch,
     private readonly sleep: (ms: number) => Promise<unknown> = delay) {}
 
+  async register(id: number, username: string): Promise<{ name: string; host: string }> {
+    const result = z.object({ bot: z.object({ registered: z.literal(true) }), site: z.object({
+      name: z.string().min(1).max(60).regex(/^[^\r\n<>]+$/),
+      host: z.string().min(1).max(255).regex(/^[a-zA-Z0-9.:-]+$/),
+    }) }).safeParse(await this.post('register', { bot_id: String(id), bot_username: username }));
+    if (!result.success) throw new SiteApiError(502);
+    return result.data.site;
+  }
+
   async prepare(id: string, user: string, username?: string): Promise<Prepared> {
     const response = await this.post('prepare', { request_id: id, telegram_user_id: user, telegram_username: username ?? null });
     const result = preparedSchema.safeParse(response);
