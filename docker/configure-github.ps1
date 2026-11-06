@@ -27,6 +27,4 @@ try {
         Write-Host "Configured $($entry.Key)"
     }
 } finally { $settings.Clear() }
-& gh variable set BOT_DEPLOY_ENABLED --body false --repo $repo
-if ($LASTEXITCODE -ne 0) { throw 'Failed to set the deployment switch.' }
-Write-Host 'GitHub configured. Deployment remains disabled; run docker/check.ps1 next.'
+Write-Host 'GitHub configured. Run docker/check.ps1 to check the server. Pushes to master deploy automatically.'

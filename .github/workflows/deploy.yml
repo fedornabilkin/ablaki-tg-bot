@@ -1,5 +1,5 @@
 name: Telegram bot
-run-name: Telegram bot · ${{ inputs.operation || 'build' }} · ${{ inputs.check_id || github.sha }}
+run-name: Telegram bot · ${{ github.event_name == 'push' && 'deploy' || inputs.operation || 'build' }} · ${{ inputs.check_id || github.sha }}
 
 on:
   push:
@@ -68,9 +68,9 @@ jobs:
             ghcr.io/${{ github.repository_owner }}/ablaki-tg-bot:latest
 
   deploy:
-    name: Server ${{ inputs.operation }}
+    name: Server ${{ github.event_name == 'push' && 'deploy' || inputs.operation }}
     needs: build
-    if: github.event_name == 'workflow_dispatch' && inputs.operation != 'build' && github.ref == 'refs/heads/master'
+    if: github.ref == 'refs/heads/master' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.operation != 'build'))
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -85,6 +85,5 @@ jobs:
           GITHUB_ACTOR: ${{ github.actor }}
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           IMAGE_TAG: ${{ github.sha }}
-          DEPLOY_OPERATION: ${{ inputs.operation }}
-          BOT_DEPLOY_ENABLED: ${{ vars.BOT_DEPLOY_ENABLED }}
+          DEPLOY_OPERATION: ${{ github.event_name == 'push' && 'deploy' || inputs.operation }}
         run: bash docker/deploy.sh

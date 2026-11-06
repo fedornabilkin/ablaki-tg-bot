@@ -12,10 +12,6 @@ if ($Operation -ne 'build') {
         if ($names -notcontains $name) { throw "Missing GitHub secret: $name. Run configure-github.ps1." }
     }
 }
-if ($Operation -eq 'deploy') {
-    $enabled = & gh variable get BOT_DEPLOY_ENABLED --repo $repo --json value --jq .value
-    if ($LASTEXITCODE -ne 0 -or "$enabled".Trim() -ne 'true') { throw 'Enable BOT_DEPLOY_ENABLED only after a successful check and stopping the local bot.' }
-}
 $checkId = [guid]::NewGuid().ToString('N')
 & gh workflow run deploy.yml --repo $repo --ref master -f "operation=$Operation" -f "check_id=$checkId"
 if ($LASTEXITCODE -ne 0) { throw 'Cannot start workflow. Check Actions permissions and that master contains the new workflow.' }

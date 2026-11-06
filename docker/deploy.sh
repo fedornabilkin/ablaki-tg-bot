@@ -18,10 +18,6 @@ done
 [[ "$IMAGE_TAG" =~ ^[a-f0-9]{40}$ ]]
 [[ "$GITHUB_ACTOR" =~ ^[A-Za-z0-9_-]+(\[bot\])?$ ]]
 [[ "$DEPLOY_OPERATION" == check || "$DEPLOY_OPERATION" == deploy ]]
-if [[ "$DEPLOY_OPERATION" == deploy && "${BOT_DEPLOY_ENABLED:-}" != true ]]; then
-  echo 'BOT_DEPLOY_ENABLED must be true for deployment; check remains available.' >&2
-  exit 1
-fi
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 ssh_dir="$(mktemp -d)"

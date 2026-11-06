@@ -6,7 +6,7 @@
 
 SSH-пользователь — `deploy`, как при выкладке фронтенда. Его существующие ключи сохраняются; права чтения домашнего каталога не ужесточаются до `700`. Каталоги бота и `.ssh` получают отдельные права.
 
-GitHub можно настроить полностью через браузер: **Settings → Secrets and variables → Actions**. В Repository secrets добавьте `BOT_HOST`, `BOT_PORT`, `BOT_USER=deploy`, `BOT_SSH_KEY` (закрытый ключ) и `BOT_KNOWN_HOSTS` (проверенный ключ сервера). Каталог `/opt/ablaki-tg-bot` закреплён в скриптах и отдельной настройки в GitHub не требует. В Repository variables добавьте `BOT_DEPLOY_ENABLED=false`. Затем **Actions → Telegram bot → Run workflow**, ветка `master`, `operation=check`. После успешной проверки и остановки локального бота измените переменную на `true` и запустите `operation=deploy`. Поле `check_id` можно оставить пустым. Команды с `gh` ниже — альтернативный способ, они не требуются для настройки через браузер.
+GitHub можно настроить полностью через браузер: **Settings → Secrets and variables → Actions**. В Repository secrets добавьте `BOT_HOST`, `BOT_PORT`, `BOT_USER=deploy`, `BOT_SSH_KEY` (закрытый ключ) и `BOT_KNOWN_HOSTS` (проверенный ключ сервера). Каталог `/opt/ablaki-tg-bot` закреплён в скриптах и отдельной настройки в GitHub не требует. После настройки каждый push в `master` автоматически выкатывает production, поэтому перед первым push остановите локального бота с тем же токеном. Проверка сервера без запуска бота: **Actions → Telegram bot → Run workflow**, ветка `master`, `operation=check`. Ручная выкладка: `operation=deploy`. Отдельная переменная разрешения выкладки не требуется; прежняя `BOT_DEPLOY_ENABLED` больше не используется. Поле `check_id` можно оставить пустым. Команды с `gh` ниже — альтернативный способ, они не требуются для настройки через браузер.
 
 | Назначение | Значение |
 |---|---|
@@ -16,7 +16,7 @@ GitHub можно настроить полностью через браузе�
 | Релизы | `/opt/ablaki-tg-bot/releases/<SHA>` |
 | Секреты приложения | `/opt/ablaki-tg-bot/.env`, владелец `deploy`, права `600` |
 | Данные | Docker volume `ablakin-telegram-bot_bot-data`, UID/GID `1000:1000` |
-| Публикация | push master собирает образ; сервер запускается только ручным `operation=deploy` |
+| Публикация | push master → проверки → образ → автоматическая выкладка production |
 
 Пользователь деплоя входит в группу Docker: это доступ уровня root к выделенному VPS. Ключ отдельный, без пароля, с ограничениями `restrict` в `authorized_keys`; не используйте ключ доступа к серверу сайта. SSH/firewall скрипты не перенастраивают, права `777` и общий `sudo NOPASSWD` не используются. [Права Docker](https://docs.docker.com/engine/install/linux-postinstall/).
 
@@ -133,7 +133,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\docker\configure-github.ps
 if ($LASTEXITCODE -ne 0) { throw 'Настройка GitHub не завершена' }
 ```
 
-Скрипт сначала проверяет **тот самый SSH-ключ и пользователя**, которым воспользуется GitHub: без пароля, sudo и интерактивного терминала. После успеха записывает `BOT_HOST`, `BOT_PORT`, `BOT_USER`, `BOT_SSH_KEY`, `BOT_KNOWN_HOSTS`. Переменная `BOT_DEPLOY_ENABLED` устанавливается в `false`: проверка разрешена, запуск пока закрыт. BotFather token и ключ API остаются только на VPS и backend. [GitHub CLI secrets](https://cli.github.com/manual/gh_secret_set).
+Скрипт сначала проверяет **тот самый SSH-ключ и пользователя**, которым воспользуется GitHub: без пароля, sudo и интерактивного терминала. После успеха записывает `BOT_HOST`, `BOT_PORT`, `BOT_USER`, `BOT_SSH_KEY`, `BOT_KNOWN_HOSTS`. Скрипт не запускает выкладку; последующие push в `master` запускают её автоматически. BotFather token и ключ API остаются только на VPS и backend. [GitHub CLI secrets](https://cli.github.com/manual/gh_secret_set).
 
 ## 5. Итоговая команда «проверить всё»
 
@@ -162,14 +162,12 @@ Get-CimInstance Win32_Process -Filter "name = 'node.exe'" |
 После успешной проверки и остановки другого экземпляра:
 
 ```powershell
-gh variable set BOT_DEPLOY_ENABLED --repo fedornabilkin/ablaki-tg-bot --body true
-if ($LASTEXITCODE -ne 0) { throw 'Не удалось разрешить выкладку' }
 powershell -NoProfile -ExecutionPolicy Bypass -File .\docker\check.ps1 -Operation deploy
 ```
 
 Релиз повторяет preflight, затем останавливает старый контейнер, запускает новый и ждёт healthcheck. При ошибке возвращает предыдущий образ и Compose; том не удаляет. При самой первой выкладке откатывать некуда — неудачный контейнер останавливается, состояние сохраняется. Нельзя параллельно запускать иной Compose project с тем же токеном. Логи ограничены 3×10 MB. Docker поднимает контейнер после перезагрузки VPS.
 
-Последующие обновления: `git push` → образ; затем та же команда с `-Operation deploy`. Без неё push сервер не меняет. Для изменения `.env` из административной SSH-сессии выполните `sudo -u deploy bash /opt/ablaki-tg-bot/docker/configure-env.sh` (из root: `runuser -u deploy -- bash /opt/ablaki-tg-bot/docker/configure-env.sh`), затем check и deploy. Релизы сохраняются; автоматической очистки образов/тома нет.
+Последующие обновления: `git push` в `master` → проверки → образ → автоматическая выкладка production. Pull request не публикует образ и не меняет сервер. Ручные `check`, `build` и `deploy` остаются доступны через Run workflow. Для изменения `.env` из административной SSH-сессии выполните `sudo -u deploy bash /opt/ablaki-tg-bot/docker/configure-env.sh` (из root: `runuser -u deploy -- bash /opt/ablaki-tg-bot/docker/configure-env.sh`), затем check и deploy. Релизы сохраняются; автоматической очистки образов/тома нет.
 
 ## 7. Посмотреть состояние и логи
 

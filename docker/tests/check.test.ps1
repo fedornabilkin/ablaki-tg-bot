@@ -9,7 +9,6 @@ function global:gh {
         if ($global:botCheckScenario -eq 'missing') { $names = @('BOT_HOST') }
         return ConvertTo-Json -Compress -InputObject @($names | ForEach-Object { @{name=$_} })
     }
-    if ($argText.StartsWith('variable get')) { return 'true' }
     if ($argText.StartsWith('workflow run')) {
         $global:botCheckDispatched = $true
         $global:botCheckId = ($args | Where-Object { $_ -like 'check_id=*' }) -replace '^check_id=', ''
