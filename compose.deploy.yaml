@@ -11,7 +11,8 @@ services:
     read_only: true
     security_opt: [no-new-privileges:true]
     cap_drop: [ALL]
-    tmpfs: [/tmp:size=1m,noexec,nosuid,nodev]
+    tmpfs:
+      - /tmp:size=1m,noexec,nosuid,nodev
     stop_grace_period: 45s
 volumes:
   bot-data:
